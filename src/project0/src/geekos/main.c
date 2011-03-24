@@ -21,8 +21,33 @@
 #include <geekos/timer.h>
 #include <geekos/keyboard.h>
 
+/*
+ *	First Thread
+ */
+void myFunc(){
+	Keycode gotKey = 0;
 
+	Print("Hello from Adrian !\n");
 
+	/* wait until gets a Cr-D */
+	do{
+		/*
+			Print("0%.4x\n",gotKey);
+		*/
+
+		if((gotKey & KEY_RELEASE_FLAG)){
+			Print("%c",gotKey);
+		}
+
+		/* get the char here to avoid printing 'd' at the end */
+		gotKey = Wait_For_Key();	
+
+	}while(	!((gotKey & KEY_CTRL_FLAG) 	&&	
+	  	 	(gotKey & KEY_RELEASE_FLAG)	&&
+			((char)gotKey == 'd')));
+
+	Print("\nBye bye my thread,,, snifff!\n");
+}
 
 /*
  * Kernel C code entry point.
@@ -42,15 +67,17 @@ void Main(struct Boot_Info* bootInfo)
     Init_Timer();
     Init_Keyboard();
 
-
     Set_Current_Attr(ATTRIB(BLACK, GREEN|BRIGHT));
     Print("Welcome to GeekOS!\n");
     Set_Current_Attr(ATTRIB(BLACK, GRAY));
 
-
-    TODO("Start a kernel thread to echo pressed keys and print counts");
-
-
+	/* kthread test */
+	Start_Kernel_Thread(
+			&myFunc,
+			0,					/* arguments for the thread function */
+			PRIORITY_NORMAL,
+			0					/*detached - use false for kernel threads*/
+			);
 
     /* Now this thread is done. */
     Exit(0);

@@ -171,6 +171,7 @@ OBJCOPY_FLAGS := -R .dynamic -R .note -R .comment
 geekos/%.o : geekos/%.c
 	$(TARGET_CC) -c $(CC_GENERAL_OPTS) $(CC_KERNEL_OPTS) $< -o geekos/$*.o
 
+#	ctags $(PROJECT_ROOT)/src/geekos/$*.c
 
 # Compilation of kernel assembly source files
 geekos/%.o : geekos/%.asm
@@ -189,7 +190,10 @@ common/%.o : common/%.c
 # ----------------------------------------------------------------------
 
 # Default target - see definition of ALL_TARGETS in Configuration section
-all : $(ALL_TARGETS)
+all : 	$(ALL_TARGETS)
+#put it in .. path to load with vim
+	cd .. ;	ctags -R 
+	
 
 # Standard floppy image - just boots the kernel
 fd.img : geekos/fd_boot.bin geekos/setup.bin geekos/kernel.bin
