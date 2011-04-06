@@ -9,8 +9,11 @@
  */
 void ELF_Print(char* msg)
 {
-
+				
   __asm__ __volatile__ (
+
+								
+
                         "int $0x90"
                         : /* no return */
                         : "a" (msg)     // goes in eax

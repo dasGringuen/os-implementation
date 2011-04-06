@@ -193,7 +193,7 @@ common/%.o : common/%.c
 all : 	$(ALL_TARGETS)
 #put it in .. path to load with vim
 	cd .. ;	ctags -R 
-	
+	mv tags ./..	
 
 # Standard floppy image - just boots the kernel
 fd.img : geekos/fd_boot.bin geekos/setup.bin geekos/kernel.bin

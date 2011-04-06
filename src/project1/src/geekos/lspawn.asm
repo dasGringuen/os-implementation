@@ -53,21 +53,21 @@ Trampoline:
 
 	push    ds	
 	push    es	
-	mov	ds, ax
-	mov	es, ax
+	mov	ds, eax
+	mov	es, eax
 
 ;; push KERNEL_CS/EIP so that we return here
 ;; after running the program
 	push    dword KERNEL_CS	
 	push    dword .backhere
 	
+
 ;; now make the inter-selector jump
 ;; we land in different cs/ds descriptors 
 	push    ebx
 	push    ecx
 	retf		
 .backhere:
-
 	pop es
 	pop ds
  	ret

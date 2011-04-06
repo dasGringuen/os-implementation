@@ -22,12 +22,12 @@
 #include <geekos/vfs.h>
 
 /* housekeeping routines, not much relevant */
-extern void Trampoline(unsigned short CodeSelector, unsigned short DataSelector, unsigned long entry);
+extern void Trampoline(unsigned int CodeSelector, unsigned int DataSelector, unsigned long entry);
 static void Printrap_Handler(struct Interrupt_State* state);
 
 static void * virtSpace;
-
-static int lprogdebug = 0;
+unsigned long virtSize;
+static int lprogdebug = 1;
 
 /*
  * Spawn_Program() sets up the memory space, and kickstarts the program
@@ -36,8 +36,8 @@ static int lprogdebug = 0;
 static int Spawn_Program(char *exeFileData, struct Exe_Format *exeFormat)
 {
   struct Segment_Descriptor* desc;
-  unsigned long virtSize;
-  unsigned short codeSelector, dataSelector;
+  unsigned int codeSelector = 0;
+  unsigned int dataSelector = 0;
 
   int i;
   ulong_t maxva = 0;
@@ -60,7 +60,7 @@ static int Spawn_Program(char *exeFileData, struct Exe_Format *exeFormat)
   /* Load segment data into memory */
   for (i = 0; i < exeFormat->numSegments; ++i) {
     struct Exe_Segment *segment = &exeFormat->segmentList[i];
-
+	Print("%d",i);
     memcpy(virtSpace + segment->startAddress,
 	   exeFileData + segment->offsetInFile,
 	   segment->lengthInFile);
@@ -94,13 +94,13 @@ static int Spawn_Program(char *exeFileData, struct Exe_Format *exeFormat)
       Print("Spawn_Program(): all structures are set up\n");
       Print(" virtSpace    = %x\n", (unsigned int) virtSpace);
       Print(" virtSize     = %x\n", (unsigned int) virtSize);
-      Print(" codeSelector = %x\n", codeSelector);
-      Print(" dataSelector = %x\n", dataSelector);
+      Print(" codeSelector = %08x\n", codeSelector);
+      Print(" dataSelector = %08x\n", dataSelector);
 
       Print("Now calling Trampoline()... \n");
     }
 
-  Trampoline(codeSelector, dataSelector, exeFormat->entryAddr); 
+  Trampoline(codeSelector, dataSelector, exeFormat->entryAddr ); 
   return 0;
 }
 
@@ -181,10 +181,16 @@ fail:
 
 static void Printrap_Handler( struct Interrupt_State* state )
 {
-  char * msg = (char *)virtSpace + state->eax;
+	char * msg ;
 
-  Print(msg);
+	if( virtSize > state->eax){
+		msg = (char *)virtSpace + state->eax;
+	}else{
+		msg = (char*)state->eax;	
+	}
 
-  g_needReschedule = true;
-  return;
+	Print(msg);
+	g_needReschedule = true;
+
+	return;
 }

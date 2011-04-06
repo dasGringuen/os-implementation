@@ -13,15 +13,13 @@
  * no formatting or other fancy features */
 void ELF_Print(char* msg);
 
-
 char  s1[40] = "Hi ! This is the first string\n";
 
 int main(int argc, char** argv)
 {
-   char  s2[40] = "Hi ! This is the second string\n"; 
+	char  s2[40] = "Hi ! This is the second string\n";
 
-   ELF_Print(s1);
-   ELF_Print(s2); 
-
-   return 0;
+	ELF_Print(s1);
+	ELF_Print(s2); 
+	return 0;
 }

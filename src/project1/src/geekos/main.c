@@ -32,6 +32,7 @@
  * with a PFAT filesystem.  (Target "fd_aug.img" in
  * the makefile.)
  */
+
 /*#define FD_BOOT*/
 
 #ifdef FD_BOOT

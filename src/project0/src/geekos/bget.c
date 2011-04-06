@@ -31,7 +31,7 @@
     buffer pool validator  implemented,  and  guaranteed  repeatable  test
     added by John Walker in October of 1995.
 
-    This program is in the public domain.
+    lThis program is in the public domain.
 
      1. This is the book of the generations of Adam.   In the day that God
 	created man, in the likeness of God made he him;
