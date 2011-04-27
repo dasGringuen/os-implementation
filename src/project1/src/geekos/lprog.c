@@ -57,6 +57,9 @@ static int Spawn_Program(char *exeFileData, struct Exe_Format *exeFormat)
   virtSpace = Malloc(virtSize);
   memset((char *) virtSpace, '\0', virtSize);
 
+  Print("%p\n", virtSpace);
+  Print("0x%8X\n", virtSpace);
+
   /* Load segment data into memory */
   for (i = 0; i < exeFormat->numSegments; ++i) {
     struct Exe_Segment *segment = &exeFormat->segmentList[i];

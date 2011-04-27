@@ -14,7 +14,8 @@
 #include <string.h>
 
 #define BUFSIZE 79
-#define DEFAULT_PATH "/c:/a"
+//#define DEFAULT_PATH "/c:/a"
+#define DEFAULT_PATH "/c/"
 
 #define INFILE	0x1
 #define OUTFILE	0x2

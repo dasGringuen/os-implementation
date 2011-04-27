@@ -4,12 +4,19 @@
 
 #include <conio.h>
 
+char* caca = "mierd";
+
 int main(int argc, char** argv)
 {
-    int i;
+    int i = 0;
+
     Print_String("I am the b program\n");
+	Print("Number of args:%d\n", argc);
+	//Print("Number of args:%d\n", argc);
+	//Print("Number of args:%d\n", argc);
+
     for (i = 0; i < argc; ++i) {
-	Print("Arg %d is %s\n", i,argv[i]);
+		Print("Arg %d is %s\n", i,argv[i]);
     }
     return 1;
 }

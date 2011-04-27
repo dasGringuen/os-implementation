@@ -43,17 +43,17 @@
 #  define ROOT_PREFIX "c"
 #endif
 
-#define INIT_PROGRAM "/" ROOT_PREFIX "/shell.exe"
 
+#define INIT_PROGRAM "/" ROOT_PREFIX "/shell.exe"
+//#define INIT_PROGRAM "/" ROOT_PREFIX "/null.exe"
+//#define INIT_PROGRAM "/" ROOT_PREFIX "/b.exe"
 
 
 static void Mount_Root_Filesystem(void);
 static void Spawn_Init_Process(void);
 
 /*
- * Kernel C code entry point.
- * Initializes kernel subsystems, mounts filesystems,
- * and spawns init process.
+ * Kernel C code entry point.  * Initializes kernel subsystems, mounts filesystems, * and spawns init process.
  */
 void Main(struct Boot_Info* bootInfo)
 {
@@ -71,14 +71,11 @@ void Main(struct Boot_Info* bootInfo)
     Init_Floppy();
     Init_IDE();
     Init_PFAT();
-
     Mount_Root_Filesystem();
 
     Set_Current_Attr(ATTRIB(BLACK, GREEN|BRIGHT));
     Print("Welcome to GeekOS!\n");
     Set_Current_Attr(ATTRIB(BLACK, GRAY));
-
-
 
 
     Spawn_Init_Process();
@@ -105,5 +102,22 @@ static void Mount_Root_Filesystem(void)
 
 static void Spawn_Init_Process(void)
 {
-    TODO("Spawn the init process");
+
+#if 0
+
+	When GeekOS boots up, it should start the user mode process in the file /c/shell.exe. This process is
+	the ancestor of all other user mode processes in the operating system. You will need to add the code to start
+	this process and wait for it to exit. See the function Spawn Init Process() in src/geekos/main.c.
+
+	/* this thread will load&run  ELF files, see the rest in lprog.c */
+	Print("Starting the Spawner thread...\n");
+	Start_Kernel_Thread( Spawner, 0, PRIORITY_NORMAL, true );
+#endif
+//	TODO("Spawn the init process");
+ 
+	struct Kernel_Thread* kthread;	
+	//Spawn(INIT_PROGRAM, "arg1 arg2", &kthread); 
+	Spawn(INIT_PROGRAM, "", &kthread); 
+	/* this thread will load&run  ELF files, see the rest in lprog
+	 */
 }

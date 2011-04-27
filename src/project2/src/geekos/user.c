@@ -98,7 +98,71 @@ int Spawn(const char *program, const char *command, struct Kernel_Thread **pThre
      * If all goes well, store the pointer to the new thread in
      * pThread and return 0.  Otherwise, return an error code.
      */
-    TODO("Spawn a process by reading an executable from a filesystem");
+	char *exeFileData = 0;
+	ulong_t exeFileLength;
+	struct Exe_Format exeFormat;
+	struct User_Context *pUserContext;
+	int retVal = 0;
+	static int temp = 0;
+
+  /*
+   * Load the executable file data, parse ELF headers,
+   * and load code and data segments into user memory.
+   */
+
+	Print("Reading %s...\n", program);
+
+	memDump(program,0x10);
+	memDump(command,0x10);
+
+	if(temp++ == 1){
+		Print("algo\n");
+	//	goto fail;
+	}
+
+	if (Read_Fully(program, (void**) &exeFileData, &exeFileLength) != 0)
+	{
+		retVal = ENOTFOUND;
+		Print("Read_Fully failed to read %s from disk\n", program);
+		goto fail;
+	}
+
+	Print("Read_Fully OK\n");
+
+	if (Parse_ELF_Executable(exeFileData, exeFileLength, &exeFormat) != 0)
+	{
+		retVal = ENOEXEC;
+		Print("Parse_ELF_Executable failed\n");
+		goto fail;
+	}
+
+	Print("Parse_ELF_Executable OK\n");
+
+	if(Load_User_Program(exeFileData, 
+				exeFileLength,
+				&exeFormat, 
+				command,
+				&pUserContext) != 0)
+	{
+		retVal = EUNSPECIFIED;
+		Print("Load_User_Program failed\n");
+		goto fail;
+	}
+
+	Print("codeSelector=%08x,DataSelector=%08x\n", pUserContext->csSelector,
+			pUserContext->dsSelector);
+
+	*pThread = Start_User_Thread(pUserContext, false);
+    /*
+     * User program has been loaded, so we can free the
+     * executable file data now.
+     */
+
+fail:
+    if(exeFileData)
+		Free(exeFileData);
+    exeFileData = 0;
+	return retVal; 
 }
 
 /*
@@ -112,11 +176,16 @@ int Spawn(const char *program, const char *command, struct Kernel_Thread **pThre
  */
 void Switch_To_User_Context(struct Kernel_Thread* kthread, struct Interrupt_State* state)
 {
+	if(kthread->userContext != NULL){
+		Switch_To_Address_Space(kthread->userContext );
+		Set_Kernel_Stack_Pointer(((ulong_t) kthread->stackPage) + PAGE_SIZE);
+	}
+
+
     /*
      * Hint: Before executing in user mode, you will need to call
      * the Set_Kernel_Stack_Pointer() and Switch_To_Address_Space()
      * functions.
      */
-    TODO("Switch to a new user address space, if necessary");
 }
 

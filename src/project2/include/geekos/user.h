@@ -97,5 +97,6 @@ bool Copy_From_User(void* destInKernel, ulong_t srcInUser, ulong_t bufSize);
 bool Copy_To_User(ulong_t destInUser, void* srcInKernel, ulong_t bufSize);
 void Switch_To_Address_Space(struct User_Context *userContext);
 
+void memDump(const void * src, size_t length);
 
 #endif  /* GEEKOS_USER_H */

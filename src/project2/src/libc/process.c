@@ -14,6 +14,8 @@
 #include <geekos/errno.h>
 #include <string.h>
 #include <process.h>
+#include <geekos/string.h>
+#include <conio.h>
 
 /* System call wrappers */
 DEF_SYSCALL(Null,SYS_NULL,int,(void),,SYSCALL_REGS_0)
@@ -51,6 +53,8 @@ int Spawn_With_Path(const char *program, const char *command,
     char exeName[(CMDLEN*2)+5];
 
     /* Try executing program as specified */
+	Print("Program:%s, command:%s\n", program, command);
+
     pid = Spawn_Program(program, command
 	);
 
@@ -81,7 +85,7 @@ int Spawn_With_Path(const char *program, const char *command,
 	    if (!Ends_With(exeName, ".exe"))
 		strcat(exeName, ".exe");
 
-	    /*Print("exeName=%s\n", exeName);*/
+	    Print("exeName=%s\n", exeName);
 	    pid = Spawn_Program(exeName, command
 		);
 	    if (pid != ENOTFOUND)

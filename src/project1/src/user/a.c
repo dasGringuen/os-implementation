@@ -21,5 +21,5 @@ int main(int argc, char** argv)
 
 	ELF_Print(s1);
 	ELF_Print(s2); 
-	return b;
+	return 0;
 }
