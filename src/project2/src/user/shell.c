@@ -277,6 +277,8 @@ void Spawn_Single_Command(struct Process procList[], int nproc, const char *path
 	Print("Could not spawn process: %s\n", Get_Error_String(pid));
     else {
 	int exitCode = Wait(pid);
+	Print("exiting...\n");
+	
 	if (exitCodes)
 	    Print("Exit code was %d\n", exitCode);
     }

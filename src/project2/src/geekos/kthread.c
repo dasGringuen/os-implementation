@@ -298,56 +298,55 @@ static void Setup_Kernel_Thread(
  * Set up the a user mode thread.
  */
 /*static*/ void Setup_User_Thread(
-    struct Kernel_Thread* kthread, struct User_Context* userContext)
+		struct Kernel_Thread* kthread, struct User_Context* userContext)
 {
-    /*
-     * Hints:
-     * - Call Attach_User_Context() to attach the user context
-     *   to the Kernel_Thread
-     * - Set up initial thread stack to make it appear that
-     *   the thread was interrupted while in user mode
-     *   just before the entry point instruction was executed
-     * - The esi register should contain the address of
-     *   the argument block
-     */
+	/*
+	 * Hints:
+	 * - Call Attach_User_Context() to attach the user context
+	 *   to the Kernel_Thread
+	 * - Set up initial thread stack to make it appear that
+	 *   the thread was interrupted while in user mode
+	 *   just before the entry point instruction was executed
+	 * - The esi register should contain the address of
+	 *   the argument block
+	 */
 	Attach_User_Context(kthread, userContext);
 
-    /* ushort_t dsSelector */
-	Push(kthread, (ulong_t)userContext->dsSelector);
+	/* ushort_t dsSelector */
+	Push(kthread, userContext->dsSelector);
 
 	/* stack pointer */
-	Push(kthread, (ulong_t)(userContext->size));
+	Push(kthread, (userContext->stackPointerAddr));
+	/*
+	 * The EFLAGS register will have all bits clear.
+	 * The important constraint is that we want to have the IF
+	 * bit clear, so that interrupts are disabled when the
+	 * thread starts.
+	 */
+	Push(kthread, 0UL);  /* EFLAGS */
 
-    /*
-     * The EFLAGS register will have all bits clear.
-     * The important constraint is that we want to have the IF
-     * bit clear, so that interrupts are disabled when the
-     * thread starts.
-     */
-    Push(kthread, 0UL);  /* EFLAGS */
+	/* ushort_t csSelector */
+	Push(kthread, userContext->csSelector);
 
-    /* ushort_t csSelector */
-	Push(kthread, (ulong_t)userContext->csSelector);
+	/* Push the address of the start function. */
+	Push(kthread, userContext->entryAddr);
 
-    /* Push the address of the start function. */
-    Push(kthread, (ulong_t)userContext->entryAddr);
+	/* Push fake error code and interrupt number. */
+	Push(kthread, 0UL);
+	Push(kthread, 0UL);
 
-    /* Push fake error code and interrupt number. */
-    Push(kthread, 0);
-    Push(kthread, 0);
-
-    /* Push initial values for general-purpose registers. */
-    Push(kthread, 0);  /* eax */
-    Push(kthread, 0);  /* ebx */
-    Push(kthread, 0);  /* ecx */
-    Push(kthread, 0);  /* edx */
-    Push(kthread, (ulong_t)userContext->argBlockAddr);  /* esi */
-    Push(kthread, 0);  /* edi */
-    Push(kthread, 0);  /* ebp */
-    /*
-     * Push values for saved segment registers.
-     * Only the ds and es registers will contain valid selectors.
-     */
+	/* Push initial values for general-purpose registers. */
+	Push(kthread, 0UL);  /* eax */
+	Push(kthread, 0UL);  /* ebx */
+	Push(kthread, 0UL);  /* ecx */
+	Push(kthread, 0UL);  /* edx */
+	Push(kthread, userContext->argBlockAddr);  /* esi */
+	Push(kthread, 0UL);  /* edi */
+	Push(kthread, 0UL);  /* ebp */
+	/*
+	 * Push values for saved segment registers.
+	 * Only the ds and es registers will contain valid selectors.
+	 */
 	Push(kthread, (ulong_t)userContext->dsSelector);	/* ds */
 	Push(kthread, (ulong_t)userContext->dsSelector);	/* es */
 	Push(kthread, (ulong_t)userContext->dsSelector);	/* fs */
@@ -545,16 +544,16 @@ struct Kernel_Thread* Start_Kernel_Thread(
 struct Kernel_Thread*
 Start_User_Thread(struct User_Context* userContext, bool detached)
 {
-    /*
-     * Hints:
-     * - Use Create_Thread() to create a new "raw" thread object
-     * - Call Setup_User_Thread() to get the thread ready to
-     *   execute in user mode
-     * - Call Make_Runnable_Atomic() to schedule the process
-     *   for execution
-     */
-    struct Kernel_Thread* kthread = Create_Thread(PRIORITY_USER, detached);
-    if (kthread != 0) {
+	/*
+	 * Hints:
+	 * - Use Create_Thread() to create a new "raw" thread object
+	 * - Call Setup_User_Thread() to get the thread ready to
+	 *   execute in user mode
+	 * - Call Make_Runnable_Atomic() to schedule the process
+	 *   for execution
+	 */
+	struct Kernel_Thread* kthread = Create_Thread(PRIORITY_USER, detached);
+	if (kthread != 0) {
 		/*
 		 * Create the initial context for the thread to make
 		 * it schedulable.
@@ -564,9 +563,9 @@ Start_User_Thread(struct User_Context* userContext, bool detached)
 
 		/* Atomically put the thread on the run queue. */
 		Make_Runnable_Atomic(kthread);
-    }
+	}
 
-    return kthread;
+	return kthread;
 }
 
 /*

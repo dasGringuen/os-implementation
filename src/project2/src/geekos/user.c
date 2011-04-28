@@ -180,12 +180,5 @@ void Switch_To_User_Context(struct Kernel_Thread* kthread, struct Interrupt_Stat
 		Switch_To_Address_Space(kthread->userContext );
 		Set_Kernel_Stack_Pointer(((ulong_t) kthread->stackPage) + PAGE_SIZE);
 	}
-
-
-    /*
-     * Hint: Before executing in user mode, you will need to call
-     * the Set_Kernel_Stack_Pointer() and Switch_To_Address_Space()
-     * functions.
-     */
 }
 

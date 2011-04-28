@@ -98,7 +98,8 @@ static int Sys_GetKey(struct Interrupt_State* state)
  */
 static int Sys_SetAttr(struct Interrupt_State* state)
 {
-    TODO("SetAttr system call");
+
+	Set_Current_Attr(state->ebx);
     return 0;
 }
 
@@ -111,7 +112,17 @@ static int Sys_SetAttr(struct Interrupt_State* state)
  */
 static int Sys_GetCursor(struct Interrupt_State* state)
 {
-	Get_Cursor((int*)&state->ebx, (int*)&state->ecx);
+    int y=0, x=0;
+
+    Get_Cursor(&y, &x);
+
+    if (! Copy_To_User(state->ebx, &y, sizeof(int))) {
+        return -1;
+    }
+    if (! Copy_To_User(state->ecx, &x, sizeof(int))) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -216,13 +227,13 @@ static int Sys_Wait(struct Interrupt_State* state)
 
 	if((childThread = Lookup_Thread(pid)) ){
 		Enable_Interrupts();
-		Join(childThread);
+		int exitCode = Join(childThread);
 		Disable_Interrupts();
+		return exitCode;
 	}else{
 		Print("Error there is no child thread with the ID %d\n", pid);
+		return -1;
 	}
-    
-	return 0;
 }
 
 /*
@@ -235,7 +246,6 @@ static int Sys_GetPID(struct Interrupt_State* state)
 {
 	return g_currentThread->pid;
 }
-
 
 /*
  * Global table of system call handler functions.

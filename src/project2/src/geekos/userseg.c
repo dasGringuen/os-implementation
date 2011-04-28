@@ -212,7 +212,6 @@ int Load_User_Program(char *exeFileData, ulong_t exeFileLength,
 		memcpy((*pUserContext)->memory + segment->startAddress,
 				exeFileData + segment->offsetInFile,
 				segment->lengthInFile);
-
 	}
 	
 	/* copy the args just after the data segment */
@@ -221,7 +220,7 @@ int Load_User_Program(char *exeFileData, ulong_t exeFileLength,
 	Print("%.8x\n", userAddress);
 	Format_Argument_Block( (*pUserContext)->memory + userAddress, numArgs, userAddress, command);
 
-//	memDump((*pUserContext)->memory  + 0x34e0, 0x6c + 0x20);
+	memDump((*pUserContext)->memory + userAddress, 0x6c + 0x20);
 
 	/* allocate the LDT descriptor in the GDT */
 	(*pUserContext)->ldtDescriptor = Allocate_Segment_Descriptor();
@@ -268,6 +267,7 @@ int Load_User_Program(char *exeFileData, ulong_t exeFileLength,
 	/* Address of argument block in user memory */
     (*pUserContext)->argBlockAddr = userAddress;
 
+	(*pUserContext)->stackPointerAddr = (*pUserContext)->size;
     /* Initial stack pointer */
     // TODO stackPointerAddr;
 
@@ -338,10 +338,12 @@ bool Copy_From_User(void* destInKernel, ulong_t srcInUser, ulong_t bufSize)
  */
 bool Copy_To_User(ulong_t destInUser, void* srcInKernel, ulong_t bufSize)
 {
-    /*
-     * Hints: same as for Copy_From_User()
-     */
-    TODO("Copy memory from kernel buffer to user buffer");
+	if(Validate_User_Memory(g_currentThread->userContext, destInUser, bufSize)){
+		memcpy( (char*)(g_currentThread->userContext)->memory + destInUser, srcInKernel, bufSize );
+		return true;
+	}else{
+		return false;
+	}
 }
 
 /*
