@@ -4,8 +4,6 @@
 
 #include <conio.h>
 
-char* caca = "mierd";
-
 int main(int argc, char** argv)
 {
     int i = 0;
