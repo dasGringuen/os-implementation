@@ -116,6 +116,7 @@ static struct Kernel_Thread* Create_Thread(int priority, bool detached)
      * object and the thread's stack.
      */
     kthread = Alloc_Page();
+	Print("Kthread: %p\n", kthread);
     if (kthread != 0)
         stackPage = Alloc_Page();    
 
@@ -565,6 +566,8 @@ Start_User_Thread(struct User_Context* userContext, bool detached)
 		Make_Runnable_Atomic(kthread);
 	}
 
+	Dump_stack_register();
+	
 	return kthread;
 }
 

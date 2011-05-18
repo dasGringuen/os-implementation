@@ -33,4 +33,5 @@ int Cancel_Timer(int id);
 
 void Micro_Delay(int us);
 
+extern int g_Quantum;
 #endif  /* GEEKOS_TIMER_H */

@@ -202,7 +202,7 @@ int Build_Pipeline(char *command, struct Process procList[])
         }
 
         proc->command = command;
-        /*Print("command=%s\n", command);*/
+      //  Print("command=%s\n", command);
         if (!Copy_Token(proc->program, command)) {
 	    Print("Error: invalid command\n");
 	    return -1;
@@ -260,24 +260,38 @@ int Build_Pipeline(char *command, struct Process procList[])
 void Spawn_Single_Command(struct Process procList[], int nproc, const char *path)
 {
     int pid;
+    bool brProc = false; /* is a background proc ? */
 
     if (nproc > 1) {
-	Print("Error: pipes not supported yet\n");
-	return;
+        Print("Error: pipes not supported yet\n");
+        return;
     }
     if (procList[0].flags & (INFILE|OUTFILE)) {
-	Print("Error: I/O redirection not supported yet\n");
-	return;
+        Print("Error: I/O redirection not supported yet\n");
+        return;
     }
 
-    pid = Spawn_With_Path(procList[0].program, procList[0].command,
-	path);
+    char* p = procList[0].command;
+
+    while(*p++){
+        if(*p == '&'){
+            /* erase from the argunents */
+            *p = 0;
+            brProc = true;
+        }
+    }
+
+    pid = Spawn_With_Path(procList[0].program, procList[0].command,	path);
+
     if (pid < 0)
-	Print("Could not spawn process: %s\n", Get_Error_String(pid));
+        Print("Could not spawn process: %s\n", Get_Error_String(pid));
     else {
-	int exitCode = Wait(pid);
-	if (exitCodes)
-	    Print("Exit code was %d\n", exitCode);
+        if(!brProc){
+            Print("Waiting to stop...\n");
+            int exitCode = Wait(pid);
+            if (exitCodes)
+                Print("Exit code was %d\n", exitCode);
+        }
     }
 }
 

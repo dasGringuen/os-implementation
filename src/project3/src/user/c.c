@@ -11,6 +11,7 @@ int main(int argc, char **argv)
 
     Print_String("I am the c program\n");
 
+    while(1);
     /* Make an illegal system call */
     __asm__ __volatile__ (
 	SYSCALL

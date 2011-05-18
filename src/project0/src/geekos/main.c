@@ -38,9 +38,9 @@ void myFunc(){
 		if((gotKey & KEY_RELEASE_FLAG)){
 			Print("%c",gotKey);
 		}
-
 		/* get the char here to avoid printing 'd' at the end */
 		gotKey = Wait_For_Key();	
+			Print("wait");
 
 	}while(	!((gotKey & KEY_CTRL_FLAG) 	&&	
 	  	 	(gotKey & KEY_RELEASE_FLAG)	&&
@@ -48,6 +48,15 @@ void myFunc(){
 
 	Print("\nBye bye my thread,,, snifff!\n");
 }
+
+void secondThread(){
+	int i;
+	while(1){
+		for(i=0; i<10000;i++);
+		Print(".");
+	}
+}
+
 
 /*
  * Kernel C code entry point.
@@ -78,6 +87,15 @@ void Main(struct Boot_Info* bootInfo)
 			PRIORITY_NORMAL,
 			0					/*detached - use false for kernel threads*/
 			);
+
+	/* kthread test */
+	Start_Kernel_Thread(
+			&secondThread,
+			0,					/* arguments for the thread function */
+			PRIORITY_NORMAL,
+			0					/*detached - use false for kernel threads*/
+			);
+
 
     /* Now this thread is done. */
     Exit(0);

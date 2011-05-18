@@ -1,5 +1,5 @@
 /*
- * GeekOS C code entry point
+* GeekOS C code entry point
  * Copyright (c) 2001,2003,2004 David H. Hovemeyer <daveho@cs.umd.edu>
  * Copyright (c) 2003, Jeffrey K. Hollingsworth <hollings@cs.umd.edu>
  * Copyright (c) 2004, Iulian Neamtiu <neamtiu@cs.umd.edu>
@@ -57,7 +57,7 @@ static void Spawn_Init_Process(void);
  */
 void Main(struct Boot_Info* bootInfo)
 {
-    Init_BSS();
+	Init_BSS();
     Init_Screen();
     Init_Mem(bootInfo);
     Init_CRC32();
@@ -74,12 +74,13 @@ void Main(struct Boot_Info* bootInfo)
     Mount_Root_Filesystem();
 
     Set_Current_Attr(ATTRIB(BLACK, GREEN|BRIGHT));
-    Print("Welcome to GeekOS!\n");
     Set_Current_Attr(ATTRIB(BLACK, GRAY));
 
-
+	Dump_stack_register();
     Spawn_Init_Process();
 
+	Print("Size:%x\n", bootInfo->memSizeKB);
+	Dump_stack_register();
     /* Now this thread is done. */
     Exit(0);
 }

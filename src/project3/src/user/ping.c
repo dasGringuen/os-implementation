@@ -18,7 +18,8 @@ int main(int argc , char ** argv)
 
   for (i=0; i < 5; i++) {
        P(pong);
-       for (j=0; j < 35; j++);
+       for (j=0; j < 35000; j++);
+       Print("Ping\n ");
        V(ping);
   }
 

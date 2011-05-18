@@ -175,14 +175,10 @@ void Setup_DMA(enum DMA_Direction direction, int chan, void *addr_, ulong_t size
 
     /* Make sure parameters are sensible */
     KASSERT(direction == DMA_READ || direction == DMA_WRITE);
-    KASSERT(VALID_CHANNEL(chan));
-    KASSERT(IS_RESERVED(chan));
+    KASSERT(VALID_CHANNEL(chan)); KASSERT(IS_RESERVED(chan));
     KASSERT(VALID_MEM(addr, size));
     KASSERT(size > 0);
-    KASSERT(size <= (0xffff - (addr & 0xffff)));  /* can't cross 64K boundary */
-
-    /* Set up transfer mode */
-    mode |= DMA_MODE_SINGLE;
+    KASSERT(size <= (0xffff - (addr & 0xffff)));  /* can't cross 64K boundary */ /* Set up transfer mode */ mode |= DMA_MODE_SINGLE;
     mode |= (direction == DMA_READ) ? DMA_MODE_READ : DMA_MODE_WRITE;
     mode |= (chan & 3);
 
@@ -241,7 +237,7 @@ void Mask_DMA(int chan)
  */
 void Unmask_DMA(int chan)
 {
-    KASSERT(VALID_CHANNEL(chan));
+	KASSERT(VALID_CHANNEL(chan));
     KASSERT(IS_RESERVED(chan));
 
     Out_Byte(DMA_MASK_ONE_REG, chan & 3);

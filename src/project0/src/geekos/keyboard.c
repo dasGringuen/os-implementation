@@ -316,6 +316,7 @@ Keycode Wait_For_Key(void)
 
     do {
 	gotKey = !Is_Queue_Empty();
+	Print(" key");
 	if (gotKey)
 	    keycode = Dequeue_Keycode();
 	else

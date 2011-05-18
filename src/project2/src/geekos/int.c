@@ -102,3 +102,15 @@ void Dump_Interrupt_State(struct Interrupt_State* state)
     Print_Selector("fs", state->fs);
     Print_Selector("gs", state->gs);
 }
+
+/* 
+ * Dump the esp register, reading it directly 
+ */
+
+void Dump_stack_register(){
+	int stack = 0; 
+    __asm__ __volatile__ ("movl %%esp, %0" : "=g" (stack)  );
+	Print("esp:%8X\n", stack);
+	return;
+}
+

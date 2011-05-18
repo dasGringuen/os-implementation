@@ -127,7 +127,6 @@ int Spawn(const char *program, const char *command, struct Kernel_Thread **pThre
 		goto fail;
 	}
 
-	Print("Read_Fully OK\n");
 
 	if (Parse_ELF_Executable(exeFileData, exeFileLength, &exeFormat) != 0)
 	{
@@ -136,7 +135,6 @@ int Spawn(const char *program, const char *command, struct Kernel_Thread **pThre
 		goto fail;
 	}
 
-	Print("Parse_ELF_Executable OK\n");
 
 	if(Load_User_Program(exeFileData, 
 				exeFileLength,
@@ -149,8 +147,8 @@ int Spawn(const char *program, const char *command, struct Kernel_Thread **pThre
 		goto fail;
 	}
 
-	Print("codeSelector=%08x,DataSelector=%08x\n", pUserContext->csSelector,
-			pUserContext->dsSelector);
+//	Print("codeSelector=%08x,DataSelector=%08x\n", pUserContext->csSelector,
+//			pUserContext->dsSelector);
 
 	*pThread = Start_User_Thread(pUserContext, false);
     /*
@@ -174,11 +172,21 @@ fail:
  *   state - saved processor registers describing the state when
  *      the thread was interrupted
  */
+static int nada = 0;
+
 void Switch_To_User_Context(struct Kernel_Thread* kthread, struct Interrupt_State* state)
 {
 	if(kthread->userContext != NULL){
+	//	Print("%d",nada);
+		if(nada == 0){
+			Dump_stack_register();
+			Print("%lx\n",(ulong_t)kthread->stackPage);
+}
 		Switch_To_Address_Space(kthread->userContext );
 		Set_Kernel_Stack_Pointer(((ulong_t) kthread->stackPage) + PAGE_SIZE);
+		if(nada++ == 0)
+			Dump_stack_register();
+
 	}
 }
 

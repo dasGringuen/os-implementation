@@ -130,7 +130,7 @@ do {					\
  * Dump interrupt state struct to screen
  */
 void Dump_Interrupt_State(struct Interrupt_State* state);
-
+void Dump_stack_register();
 /**
  * Start interrupt-atomic region.
  * @return true if interrupts were enabled at beginning of call,

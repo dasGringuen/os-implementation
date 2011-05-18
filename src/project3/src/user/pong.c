@@ -13,12 +13,13 @@ int main(int argc , char ** argv)
 
   time = Get_Time_Of_Day();
   scr_sem = Create_Semaphore ("screen" , 1) ;   /* register for screen use */
-  ping = Create_Semaphore ("ping" , 1) ;    
+  ping = Create_Semaphore ("ping" , 1 /* 1 */) ;    
   pong = Create_Semaphore ("pong" , 0) ;   
 
   for (i=0; i < 5; i++) {
        P(ping);
        for (j=0; j < 35; j++);
+       Print("Pong \n");
        V(pong);
   }
 

@@ -191,9 +191,6 @@ common/%.o : common/%.c
 
 # Default target - see definition of ALL_TARGETS in Configuration section
 all : 	$(ALL_TARGETS)
-#put it in .. path to load with vim
-	cd .. ;	ctags -R 
-	mv tags ./..	
 
 # Standard floppy image - just boots the kernel
 fd.img : geekos/fd_boot.bin geekos/setup.bin geekos/kernel.bin

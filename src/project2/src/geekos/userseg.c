@@ -219,8 +219,9 @@ int Load_User_Program(char *exeFileData, ulong_t exeFileLength,
 	int userAddress = segment->startAddress + segment->lengthInFile;
 	Print("%.8x\n", userAddress);
 	Format_Argument_Block( (*pUserContext)->memory + userAddress, numArgs, userAddress, command);
-
-	memDump((*pUserContext)->memory + userAddress, 0x6c + 0x20);
+	
+	/* to show some part of the code */
+//	memDump((*pUserContext)->memory + userAddress, 0x6c + 0x20);
 
 	/* allocate the LDT descriptor in the GDT */
 	(*pUserContext)->ldtDescriptor = Allocate_Segment_Descriptor();
@@ -282,8 +283,8 @@ int Load_User_Program(char *exeFileData, ulong_t exeFileLength,
 	/* for debuging */
 	Print("virt Space: From %p to %p\n", (*pUserContext)->memory, (*pUserContext)->memory + (*pUserContext)->size);
 	Print("%.8lX\n", (*pUserContext)->size);
-	Print("codeSelector=%08x,DataSelector=%08x\n", (*pUserContext)->csSelector,
-			(*pUserContext)->dsSelector);
+	//Print("codeSelector=%08x,DataSelector=%08x\n", (*pUserContext)->csSelector,
+	//		(*pUserContext)->dsSelector);
 
 //j	memDump((*pUserContext)->memory+0x24f0,0x100);
 //	memDump((void*)(*pUserContext),0x100);

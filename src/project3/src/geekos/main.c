@@ -72,6 +72,7 @@ void Main(struct Boot_Info* bootInfo)
     Init_IDE();
     Init_PFAT();
 
+	Dump_All_Thread_List();
     Mount_Root_Filesystem();
 
     Set_Current_Attr(ATTRIB(BLACK, GREEN|BRIGHT));
@@ -98,12 +99,9 @@ static void Mount_Root_Filesystem(void)
 
 }
 
-
-
-
-
-
 static void Spawn_Init_Process(void)
 {
-    TODO("Spawn the init process");
+   struct Kernel_Thread *userThread = NULL;
+   Spawn(INIT_PROGRAM, INIT_PROGRAM, &userThread);
+
 }
