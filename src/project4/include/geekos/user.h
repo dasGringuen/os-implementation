@@ -71,10 +71,6 @@ struct User_Context {
      * in the same user context
      */
     int refCount;
-
-#if 0
-    int *semaphores;
-#endif
 };
 
 struct Kernel_Thread;
@@ -102,4 +98,5 @@ bool Copy_To_User(ulong_t destInUser, void* srcInKernel, ulong_t bufSize);
 void Switch_To_Address_Space(struct User_Context *userContext);
 
 
+void memDump(const void * src, size_t length);
 #endif  /* GEEKOS_USER_H */

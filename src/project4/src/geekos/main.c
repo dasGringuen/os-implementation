@@ -45,7 +45,7 @@
 #endif
 
 #define INIT_PROGRAM "/" ROOT_PREFIX "/shell.exe"
-
+//#define INIT_PROGRAM "/" ROOT_PREFIX "/c.exe"
 
 
 static void Mount_Root_Filesystem(void);
@@ -108,5 +108,6 @@ static void Mount_Root_Filesystem(void)
 
 static void Spawn_Init_Process(void)
 {
-    TODO("Spawn the init process");
+    struct Kernel_Thread *userThread = NULL;
+    Spawn(INIT_PROGRAM, INIT_PROGRAM, &userThread);
 }

@@ -33,6 +33,7 @@
  */
 static int Sys_Null(struct Interrupt_State* state)
 {
+    Print("Sys_Null was called.\n");
     return 0;
 }
 
@@ -46,7 +47,10 @@ static int Sys_Null(struct Interrupt_State* state)
  */
 static int Sys_Exit(struct Interrupt_State* state)
 {
-    TODO("Exit system call");
+    Enable_Interrupts();
+    Detach_User_Context(g_currentThread);
+    Disable_Interrupts();
+    Exit(state->ebx);
 }
 
 /*
@@ -58,7 +62,26 @@ static int Sys_Exit(struct Interrupt_State* state)
  */
 static int Sys_PrintString(struct Interrupt_State* state)
 {
-    TODO("PrintString system call");
+    char *message = NULL;
+    ulong_t len = state->ecx;
+
+    if (len > 1024){
+        return -1;
+    }
+
+    message = Malloc(sizeof(char) * len + 1);
+    if (message == NULL) {
+        return -1;
+    }
+
+    if (!Copy_From_User(message, state->ebx, len)) {
+        Free(message);
+        return -1;
+    }
+
+    Put_Buf(message, len);
+    Free(message);
+    return 0;
 }
 
 /*
@@ -70,7 +93,8 @@ static int Sys_PrintString(struct Interrupt_State* state)
  */
 static int Sys_GetKey(struct Interrupt_State* state)
 {
-    TODO("GetKey system call");
+    int keyCode = Wait_For_Key();
+    return keyCode;
 }
 
 /*
@@ -81,7 +105,8 @@ static int Sys_GetKey(struct Interrupt_State* state)
  */
 static int Sys_SetAttr(struct Interrupt_State* state)
 {
-    TODO("SetAttr system call");
+    Set_Current_Attr(state->ebx);
+    return 0;
 }
 
 /*
@@ -93,7 +118,15 @@ static int Sys_SetAttr(struct Interrupt_State* state)
  */
 static int Sys_GetCursor(struct Interrupt_State* state)
 {
-    TODO("GetCursor system call");
+    int r=0, c=0;
+    Get_Cursor(&r, &c);
+    if (!Copy_To_User(state->ebx, &r, sizeof(int))) {
+        return -1;
+    }
+    if (!Copy_To_User(state->ecx, &c, sizeof(int))) {
+        return -1;
+    }
+    return 0;
 }
 
 /*
@@ -105,7 +138,10 @@ static int Sys_GetCursor(struct Interrupt_State* state)
  */
 static int Sys_PutCursor(struct Interrupt_State* state)
 {
-    TODO("PutCursor system call");
+    if (Put_Cursor(state->ebx, state->ecx))
+        return 0;
+    else
+        return -1;
 }
 
 /*
@@ -119,7 +155,54 @@ static int Sys_PutCursor(struct Interrupt_State* state)
  */
 static int Sys_Spawn(struct Interrupt_State* state)
 {
-    TODO("Spawn system call");
+    int retVal = -1;
+    char *exeName = NULL;
+    char *command = NULL;
+    ulong_t exeNameLen = state->ecx + 1; /* +1 to add the 0 NULL later */
+    ulong_t commandLen = state->esi + 1; /* +1 to add the 0 NULL later */
+    struct Kernel_Thread* kthread = NULL;
+
+    /* get some memory for the exe name and the args */
+    exeName = (char*) Malloc(exeNameLen);
+    if (exeName == NULL)
+        goto memfail;
+    command = (char*) Malloc(commandLen);
+    if (command == NULL)
+        goto memfail;
+
+    memset(exeName, '\0', exeNameLen);
+    if(!Copy_From_User(exeName, state->ebx, exeNameLen)){
+        retVal = EUNSPECIFIED;
+        goto fail;
+    }
+    memset(command, '\0', commandLen);
+    if(!Copy_From_User(command, state->edx, commandLen)) {
+        retVal = EUNSPECIFIED;
+        goto fail;
+    }
+
+    Enable_Interrupts();
+    if ((retVal = Spawn(exeName, command, &kthread))) {
+        goto fail;
+    }
+    Disable_Interrupts();
+
+    if (exeName!=NULL)
+        Free(exeName);
+    if (command!=NULL)
+        Free(command);
+
+    return kthread->pid;
+
+memfail:
+    retVal = ENOMEM;
+
+fail:
+    if(exeName)
+        Free(exeName);
+    if (command)
+        Free(command);
+    return retVal;
 }
 
 /*
@@ -131,7 +214,16 @@ static int Sys_Spawn(struct Interrupt_State* state)
  */
 static int Sys_Wait(struct Interrupt_State* state)
 {
-    TODO("Wait system call");
+    int exit_code = -1;
+    struct Kernel_Thread *kthread = Lookup_Thread(state->ebx);
+    if (kthread==NULL)
+        return -1;
+
+    Enable_Interrupts();
+    exit_code = Join(kthread);
+    Disable_Interrupts();
+
+    return exit_code;
 }
 
 /*
@@ -142,7 +234,7 @@ static int Sys_Wait(struct Interrupt_State* state)
  */
 static int Sys_GetPID(struct Interrupt_State* state)
 {
-    TODO("GetPID system call");
+    return g_currentThread->pid;
 }
 
 /*
@@ -155,6 +247,7 @@ static int Sys_GetPID(struct Interrupt_State* state)
 static int Sys_SetSchedulingPolicy(struct Interrupt_State* state)
 {
     TODO("SetSchedulingPolicy system call");
+    return -1;
 }
 
 /*
@@ -167,6 +260,7 @@ static int Sys_SetSchedulingPolicy(struct Interrupt_State* state)
 static int Sys_GetTimeOfDay(struct Interrupt_State* state)
 {
     TODO("GetTimeOfDay system call");
+    return -1;
 }
 
 /*
@@ -180,6 +274,7 @@ static int Sys_GetTimeOfDay(struct Interrupt_State* state)
 static int Sys_CreateSemaphore(struct Interrupt_State* state)
 {
     TODO("CreateSemaphore system call");
+    return -1;
 }
 
 /*
@@ -194,6 +289,7 @@ static int Sys_CreateSemaphore(struct Interrupt_State* state)
 static int Sys_P(struct Interrupt_State* state)
 {
     TODO("P (semaphore acquire) system call");
+    return -1;
 }
 
 /*
@@ -206,6 +302,7 @@ static int Sys_P(struct Interrupt_State* state)
 static int Sys_V(struct Interrupt_State* state)
 {
     TODO("V (semaphore release) system call");
+    return -1;
 }
 
 /*
@@ -218,6 +315,7 @@ static int Sys_V(struct Interrupt_State* state)
 static int Sys_DestroySemaphore(struct Interrupt_State* state)
 {
     TODO("DestroySemaphore system call");
+    return -1;
 }
 
 

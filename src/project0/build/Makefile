@@ -145,7 +145,7 @@ NUMSECS := $(PERL) $(PROJECT_ROOT)/scripts/numsecs
 # ----------------------------------------------------------------------
 
 # Flags used for all C source files
-GENERAL_OPTS := -O -Wall $(EXTRA_C_OPTS) -m32 -nostdlib
+GENERAL_OPTS := -g -O -Wall  $(EXTRA_C_OPTS) -m32 -nostdlib  
 CC_GENERAL_OPTS := $(GENERAL_OPTS) -Werror 
 
 # Flags used for kernel C source files

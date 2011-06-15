@@ -10,6 +10,8 @@
 #include <geekos/int.h>
 #include <geekos/mem.h>
 #include <geekos/paging.h>
+#include <geekos/segment.h>
+#include <geekos/gdt.h>
 #include <geekos/malloc.h>
 #include <geekos/string.h>
 #include <geekos/argblock.h>
@@ -22,7 +24,83 @@
  * Private functions
  * ---------------------------------------------------------------------- */
 
-// TODO: Add private functions
+static bool Validate_User_Memory(struct User_Context* userContext,
+    ulong_t userAddr, ulong_t bufSize)
+{
+
+    ulong_t avail;
+
+    if (userAddr >= USER_VM_SIZE)
+        return false;
+
+    avail = USER_VM_SIZE - userAddr;
+    if (bufSize > avail)
+        return false;
+
+    return true;
+}
+
+/*
+ * Create a new user context of given size
+ */
+static struct User_Context* Create_User_Context(ulong_t size)
+{
+    /* Tiene que ser múltiplo de PAGE_SIZE */
+    KASSERT(size%PAGE_SIZE == 0);
+
+    /* Pido memoria para el proceso */
+    char *mem = (char *) Malloc(size);
+    if (mem == NULL)
+        goto error;
+
+    /* Reset memory with zeros */
+    memset(mem, '\0', size);
+    
+    /* Pido memoria para el User_Context */
+    struct User_Context *userContext = Malloc(sizeof(struct User_Context));
+    if (userContext ==  NULL)
+        goto error;
+
+    /* Guardo el segment descriptor de la ldt en la gdt */
+    struct Segment_Descriptor *ldt_desc = Allocate_Segment_Descriptor(); //LDT-Descriptor for the process
+    if (ldt_desc == NULL)
+        goto error;
+
+    Init_LDT_Descriptor(ldt_desc, userContext->ldt, NUM_USER_LDT_ENTRIES);
+    /* Creo un selector para el descriptor de ldt */
+    ushort_t ldt_selector = Selector(KERNEL_PRIVILEGE, true, Get_Descriptor_Index(ldt_desc)); 
+
+    /* TODO ver esto!!! los limites*/
+    Init_Code_Segment_Descriptor(&(userContext->ldt[0]),  USER_VM_START, USER_VM_SIZE / PAGE_SIZE, USER_PRIVILEGE);
+    Init_Data_Segment_Descriptor(&(userContext->ldt[1]),  USER_VM_START, USER_VM_SIZE / PAGE_SIZE, USER_PRIVILEGE);
+    //Init_Code_Segment_Descriptor(&(userContext->ldt[0]), (ulong_t)mem, size/PAGE_SIZE, USER_PRIVILEGE);
+    //Init_Data_Segment_Descriptor(&(userContext->ldt[1]), (ulong_t)mem, size/PAGE_SIZE, USER_PRIVILEGE);
+
+    /* Creo los selectores */
+    ushort_t cs_selector = Selector(USER_PRIVILEGE, false, 0);
+    ushort_t ds_selector = Selector(USER_PRIVILEGE, false, 1);
+
+
+    /* Asigno todo al userContext */
+    userContext->ldtDescriptor = ldt_desc;
+    userContext->ldtSelector = ldt_selector;
+    userContext->csSelector = cs_selector;
+    userContext->dsSelector = ds_selector;
+    userContext->size = size;
+    userContext->memory = mem;
+    userContext->refCount = 0;
+    goto success;
+
+error:
+    if (mem != NULL)
+        Free(mem);
+    if (userContext != NULL)
+        Free(userContext);
+    return NULL;
+
+success:
+    return userContext;
+}
 /* ----------------------------------------------------------------------
  * Public functions
  * ---------------------------------------------------------------------- */
@@ -76,14 +154,118 @@ int Load_User_Program(char *exeFileData, ulong_t exeFileLength,
      * - Fill in initial stack pointer, argument block address,
      *   and code entry point fields in User_Context
      */
-    TODO("Load user program into address space");
+
+    KASSERT(exeFileData != NULL);
+    KASSERT(command != NULL);
+    KASSERT(exeFormat != NULL);
+
+    int i;
+    int ret = 0;
+    ulong_t maxva = 0;
+    ulong_t flags = VM_WRITE | VM_READ | VM_USER;
+    ulong_t virtSize;
+
+
+    void* vaddr;
+    ulong_t argBlockSize = 0;
+    ulong_t argVirAdd = 0;
+    void* argPhyAdd = 0;
+
+    void* stackVirAdd = 0;
+    void* stackPhyAdd = 0;
+
+    //ulong_t stackAddr = 0;
+    unsigned numArgs = 0;
+    struct User_Context *userContext = 0;
+
+    /* Page directory for user address space. */
+    pde_t *pageDir = Alloc_Page();
+    memset(pageDir, '\0', PAGE_SIZE);
+ 
+    Print("User directroy on:%.8lx\n",(ulong_t)pageDir);
+
+    /* copy the entries form the kernel page directory */
+    memcpy(pageDir, g_kernelPageDir, PAGE_SIZE);
+ 
+    /* Find maximum virtual address */
+    for (i = 0; i < exeFormat->numSegments; ++i) {
+        struct Exe_Segment *segment = &exeFormat->segmentList[i];
+        ulong_t topva = segment->startAddress + segment->sizeInMemory;
+
+        if (topva > maxva)
+            maxva = topva;
+    }
+
+    /* get arguments */
+    Get_Argument_Block_Size(command, &numArgs, &argBlockSize);
+    
+    /* user context */
+    virtSize = Round_Up_To_Page(maxva ) + 0x2000;
+    userContext = Create_User_Context(virtSize);
+
+    /* Copy segments over into process' memory space */
+    for (i = 0; i < exeFormat->numSegments; i++) {
+        struct Exe_Segment *segment = &exeFormat->segmentList[i];
+        
+        memcpy(userContext->memory + segment->startAddress,
+            exeFileData + segment->offsetInFile,
+            segment->lengthInFile);
+    }
+
+    /* fill the user pages */
+    int nPages = virtSize / PAGE_SIZE + 1;
+
+    Print("nPages:%d", nPages);
+    Print(" tempMem: %p\n", userContext->memory);
+    vaddr = (void*)USER_VM_START;
+    Print(" Virtual Add:%lX ", (ulong_t)vaddr);
+
+    for (i = 0; i < nPages; i++) {
+        void* phaddr;
+
+        phaddr = Register_User_Page(pageDir, (ulong_t)vaddr + i * PAGE_SIZE, flags);
+        Print(" PhPage:%lX ", (ulong_t)phaddr );
+
+        /* copy the file content on the new created page */
+        Print("Coping. From:%lx To:%lx \n", (ulong_t)userContext->memory + i * PAGE_SIZE,
+                                                    (ulong_t)phaddr);
+
+        memcpy( (char*)phaddr, userContext->memory + i * PAGE_SIZE, PAGE_SIZE);
+    }
+
+    /* STACK */
+    /* register the virtual address */
+    stackVirAdd = (void*)0xFFFFE000;
+    stackPhyAdd = Register_User_Page(pageDir, (ulong_t)stackVirAdd, flags);
+    memset(stackPhyAdd, '\0', PAGE_SIZE);
+
+    /* ARGS */
+    argVirAdd = 0xFFFFF000;
+    argPhyAdd = Register_User_Page(pageDir, argVirAdd, flags);
+
+    /* format the args */
+    Format_Argument_Block(argPhyAdd,
+            numArgs,
+            argVirAdd - USER_VM_START, /* must be in user space */
+            command);
+
+    /* Create the user context */
+    userContext->entryAddr          = exeFormat->entryAddr;
+    userContext->argBlockAddr       = argVirAdd - USER_VM_START;//virtSize - 0x100;//argVirAdd - USER_VM_START;
+    userContext->stackPointerAddr   = (ulong_t)((ulong_t)stackVirAdd - USER_VM_START + PAGE_SIZE );
+
+    Print("Stack Physical:%lx,virtual:%lx,user:%lx \n",(ulong_t)stackPhyAdd, (ulong_t)stackVirAdd ,userContext->stackPointerAddr);
+
+    userContext->pageDir = pageDir;
+    *pUserContext = userContext;
+    return ret;
 }
 
 /*
  * Copy data from user buffer into kernel buffer.
  * Returns true if successful, false otherwise.
  */
-bool Copy_From_User(void* destInKernel, ulong_t srcInUser, ulong_t numBytes)
+bool Copy_From_User(void* destInKernel, ulong_t srcInUser, ulong_t bufSize)
 {
     /*
      * Hints:
@@ -103,7 +285,22 @@ bool Copy_From_User(void* destInKernel, ulong_t srcInUser, ulong_t numBytes)
      * interrupts are disabled; because no other process can run,
      * the page is guaranteed not to be stolen.
      */
-    TODO("Copy user data to kernel buffer");
+
+    KASSERT(destInKernel != NULL);
+    KASSERT(srcInUser != 0);
+
+    bool mem_valid = false;
+
+    if (g_currentThread->userContext != NULL) {
+        mem_valid = Validate_User_Memory(g_currentThread->userContext,
+                                            srcInUser, bufSize);
+        if (mem_valid) {
+                memcpy(destInKernel,
+                        (char*)(srcInUser + 0x80000000), 
+                        bufSize);
+        }
+    }
+    return mem_valid;
 }
 
 /*
@@ -118,7 +315,20 @@ bool Copy_To_User(ulong_t destInUser, void* srcInKernel, ulong_t numBytes)
      * - Also, make sure the memory is mapped into the user
      *   address space with write permission enabled
      */
-    TODO("Copy kernel data to user buffer");
+
+    KASSERT(srcInKernel != NULL);
+    KASSERT(destInUser != 0);
+    
+    bool mem_valid = true;
+    
+    if (g_currentThread->userContext != NULL) {
+        mem_valid = Validate_User_Memory(g_currentThread->userContext,
+                                            destInUser, numBytes);
+        if (mem_valid) {
+            memcpy((char*)(0x80000000+destInUser), srcInKernel,numBytes);
+        }
+    }
+    return mem_valid;
 }
 
 /*
@@ -131,7 +341,21 @@ void Switch_To_Address_Space(struct User_Context *userContext)
      *   segments, switch to the process's LDT
      * - 
      */
-    TODO("Switch_To_Address_Space() using paging");
+    KASSERT(userContext != NULL);
+    KASSERT(userContext->ldtSelector != 0);
+    /*
+     * Hint: you will need to use the lldt assembly language instruction
+     * to load the process's LDT by specifying its LDT selector.
+     */
+    /* Load the task register */
+    __asm__ __volatile__ (
+        "lldt %0"
+        :
+        : "a" (userContext->ldtSelector)
+    );
+
+
+    Set_PDBR(userContext->pageDir);
 }
 
 

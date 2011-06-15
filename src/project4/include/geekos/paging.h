@@ -37,6 +37,9 @@ struct User_Context;
 #define VM_READ    0	 /* Memory can be read (ignored for x86) */
 #define VM_EXEC    0	 /* Memory can be executed (ignored for x86) */
 
+#define USER_VM_START 0x80000000UL
+#define USER_VM_END 0xFFFFFFFFUL
+#define USER_VM_SIZE USER_VM_START 
 
 /*
  * Page directory entry datatype.
@@ -115,5 +118,10 @@ void Free_Space_On_Paging_File(int pagefileIndex);
 void Write_To_Paging_File(void *paddr, ulong_t vaddr, int pagefileIndex);
 void Read_From_Paging_File(void *paddr, ulong_t vaddr, int pagefileIndex);
 
+void Set_Page_Table_Entry( pte_t* tableEntry, ulong_t physicalAddr, ulong_t flags);
 
+pte_t* Register_Page( pde_t* pageDirectory, ulong_t linearAddr, ulong_t flags);
+void* Register_User_Page( pde_t* pageDir, ulong_t vaddr, ulong_t flags);
+
+extern void* g_kernelPageDir;
 #endif

@@ -25,3 +25,6 @@ i440fxsupport: enabled=0
 # bochs.out.  This produces a lot of output, but can be very
 # useful for debugging the kernel.
 #debug: action=report
+#
+gdbstub: enabled=1, port=1234, text_base=0, data_base=0, bss_base=0
+

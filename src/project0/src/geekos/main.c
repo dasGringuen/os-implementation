@@ -51,9 +51,9 @@ void myFunc(){
 
 void secondThread(){
 	int i;
-	while(1){
+	while(0){
 		for(i=0; i<10000;i++);
-		Print(".");
+	//	Print(".");
 	}
 }
 

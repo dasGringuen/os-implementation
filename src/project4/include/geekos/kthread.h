@@ -12,6 +12,7 @@
 
 #include <geekos/ktypes.h>
 #include <geekos/list.h>
+#include <geekos/bitset.h>
 
 struct Kernel_Thread;
 struct User_Context;
@@ -66,6 +67,8 @@ struct Kernel_Thread {
      */
     int currentReadyQueue;
     bool blocked;
+
+    void* semaphores; /* Bitset of semaphores in use by this thread */
 };
 
 /*
@@ -139,6 +142,12 @@ void Wake_Up_One(struct Thread_Queue* waitQueue);
  */
 extern struct Kernel_Thread* g_currentThread;
 
+
+#define POLICY_RR   0 
+#define POLICY_MLF  1 
+extern int g_Policy;
+
+void Turn_to_RR();
 /*
  * Boolean flag indicating that we need to choose a new runnable thread.
  */

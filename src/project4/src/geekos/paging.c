@@ -26,6 +26,8 @@
 /* ----------------------------------------------------------------------
  * Public data
  * ---------------------------------------------------------------------- */
+    
+void* g_kernelPageDir;
 
 /* ----------------------------------------------------------------------
  * Private functions/data
@@ -105,6 +107,126 @@ static void Print_Fault_Info(uint_t address, faultcode_t faultCode)
  * Public functions
  * ---------------------------------------------------------------------- */
 
+/* used to get the physical address of the table */
+ulong_t Get_Table_Page_Address( ulong_t dirEntrySelector)
+{
+    return 0;
+}
+
+
+void Set_Page_Table_Entry(
+    pte_t* tableEntry, 
+    ulong_t physicalAddr,
+    ulong_t flags 
+)
+{
+  //  Print("Table Entry  %X", (unsigned int)tableEntry);
+  //  Print("Base address: %X\n", (unsigned int)physicalAddr);
+    tableEntry->present = 1;                     /* 1b               */
+    tableEntry->flags = flags & 0x0F;            /* 4b               */
+    tableEntry->accesed = 0;                     /* 1b               */
+    tableEntry->dirty = 0;                       /* 1b               */
+    tableEntry->pteAttribute = 0;                /* 1b               */
+    tableEntry->globalPage = 0;                  /* 1b               */
+    tableEntry->kernelInfo = 0; //????????       /* 3b               */ 
+    tableEntry->pageBaseAddr = (physicalAddr >> PAGE_POWER) & 0xFFFFF;    /* 20b              */
+}
+
+void Set_Page_Directory_Entry(
+    pde_t* dirEntry,
+    ulong_t physicalAddr,
+    ulong_t flags 
+)
+{
+    Print("Dir Entry address: %X", (unsigned int)dirEntry);
+    Print("Base address: %X\n", (unsigned int)physicalAddr);
+    dirEntry->present = 1;                     /* 1b               */
+    dirEntry->flags = flags & 0x0F;            /* 4b               */
+    dirEntry->accesed = 0;                     /* 1b               */
+    //directory->reserved                      /* 1b               */
+    dirEntry->largePages = 0;                  /* 1b               */
+    dirEntry->globalPage = 0;                  /* 1b               */
+    dirEntry->kernelInfo = 0; //????????       /* 3b               */ 
+    dirEntry->pageTableBaseAddr = (physicalAddr >> PAGE_POWER ) & 0xFFFFF;    /* 20b              */
+}
+
+
+
+void* Register_User_Page( pde_t* pageDir, 
+        ulong_t vaddr, 
+        ulong_t flags)
+{
+    pte_t* entry = Register_Page(
+                        pageDir,        /* page directory */ 
+                        vaddr,          /* linear address */ 
+                        flags);
+                        
+                /* alloc a page, the return value will be the physical address */
+                void* phaddr = Alloc_Pageable_Page(entry, vaddr);
+            
+                /* fill the table entry with the physical address */
+                Set_Page_Table_Entry(entry, (ulong_t)phaddr, flags);
+
+                return phaddr;
+}
+
+/* 
+ * @param pageDirectory: in bytes
+ * @param linearAddr: in BYTES not in Pages
+ * @param flags  
+ * @return a pointer to the table written. 
+ */
+pte_t* Register_Page(
+    pde_t* pageDirectory, 
+    ulong_t linearAddr, 
+    ulong_t flags 
+)
+{
+    ulong_t dirIndex;
+    ulong_t tableIndex;
+    pde_t* dirEntry;
+    void* tablePhyAddress;
+    pte_t* tableEntry;
+
+    /* get the index of the linear address on the directory table */
+    dirIndex = PAGE_DIRECTORY_INDEX( linearAddr );
+
+    /* get the index on the table */
+    tableIndex = PAGE_TABLE_INDEX( linearAddr );
+
+    /*Print("LinearAddress:%X, DirIndex:%X, TableInd:%X ", (int)linearAddr, (int)dirIndex, (int)tableIndex); */
+
+    /* check if the directory entry for this address exist */
+    dirEntry = &pageDirectory[dirIndex];
+
+    if(!dirEntry->present)
+    {
+        /* I it does not exist, allocate a new table and add a entry on the
+         * directory table 
+         */
+        tablePhyAddress = Alloc_Page();
+        memset(tablePhyAddress, '\0',PAGE_SIZE);
+        Print("New Table: %.8lx\n", (ulong_t)tablePhyAddress);
+
+        Set_Page_Directory_Entry(dirEntry, 
+                (ulong_t)tablePhyAddress,
+                flags);                /* flags */
+
+    } else {
+        tablePhyAddress = (void*)(dirEntry->pageTableBaseAddr << 12); 
+    }
+
+    /* Print("Using Table: %.8lx\n", (ulong_t)tablePhyAddress); */
+
+    /* creates an entry on the table, now will be pointig to the beggining of
+     * the table */
+    tableEntry = (pte_t*)tablePhyAddress;
+  
+    /* returns a pointer to the entry on the TABLE not the DIR!! */
+    return (pte_t*)(tableEntry + tableIndex);
+}
+
+
 
 /*
  * Initialize virtual memory by building page tables
@@ -121,7 +243,77 @@ void Init_VM(struct Boot_Info *bootInfo)
      * - Do not map a page at address 0; this will help trap
      *   null pointer references
      */
-    TODO("Build initial kernel page directory and page tables");
+    int i;
+  
+    /* calculate number of pages */
+    ulong_t numPages = bootInfo->memSizeKB >> 2;
+   
+    /* page directory */
+    g_kernelPageDir = Alloc_Page();
+    memset(g_kernelPageDir, '\0', PAGE_SIZE);
+
+    Print("Directroy on:%.8lx\n",(ulong_t)g_kernelPageDir);
+
+/*
+ * Get the address of the page, from the index of .
+ */
+    for (i=0; i < numPages; i++) {
+        ulong_t address = i << PAGE_POWER; 
+        ulong_t flags = VM_WRITE | VM_READ ;//| VM_USER;
+
+        pte_t *entry = Register_Page(
+                g_kernelPageDir, 
+                address,                /* virtual address */
+                flags);
+
+        /* set the table entry with the physical address */
+        Set_Page_Table_Entry(entry, address, flags); 
+
+        /* get the struct of the page, (is in the queue of all pages) */
+        struct Page* tPage = Get_Page(address);
+        /* set the table entry (entry of the table not the directory) */
+        tPage->entry = entry;
+        /* set the virtual address, for kernel is the same as the physical */
+        tPage->vaddr = address;
+    }
+    
+    Install_Interrupt_Handler(14, Page_Fault_Handler);
+     
+    Enable_Paging(g_kernelPageDir);
+    return;
+
+#if 0
+    for (i=0; i < kernelDirEntries; i++) {
+        void* kernelTable = Alloc_Page();
+
+        /* add entry on the dir table */
+        pde_t dirEntry =  
+        /* calculates number of entries in the table */
+        ulong_t pagesInTable = (numPages <= 1024) ? numPages: 1024;
+
+            Print("%d", (int)pagesInTable);
+        for (j = 0; j < pagesInTable; j++) {
+            /* add entry on the table */ 
+            //Print("%d", (int)numPages);
+            numPages--; 
+        }
+    }
+#endif
+
+#if 0
+        if ((g_pageList[i].flags & PAGE_PAGEABLE) &&
+                (g_pageList[i].flags & PAGE_ALLOCATED)) {
+            if (!best) best = &g_pageList[i];
+            curr = &g_pageList[i];
+            if ((curr->clock < best->clock) && (curr->flags & PAGE_PAGEABLE)) {
+                best = curr;
+            }
+        }
+    }
+
+PAGE_DIRECTORY_INDEX
+#endif
+    //TODO("Build initial kernel page directory and page tables");
 }
 
 /**
@@ -131,7 +323,7 @@ void Init_VM(struct Boot_Info *bootInfo)
  */
 void Init_Paging(void)
 {
-    TODO("Initialize paging file data structures");
+  //  TODO("Initialize paging file data structures");
 }
 
 /**

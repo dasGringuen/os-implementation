@@ -32,6 +32,8 @@ NON_ELF_SYSTEM     := yes
 EXTRA_CC_USER_OPTS := -Dmain=geekos_main
 endif
 
+EXTRA_C_OPTS=-fno-stack-protector # Otherwise we get an undefined ref in ubuntu
+
 # ----------------------------------------------------------------------
 # Configuration -
 #   Various options specifying how GeekOS should be built,
@@ -60,7 +62,7 @@ KERNEL_C_SRCS := idt.c int.c trap.c irq.c io.c \
 	elf.c blockdev.c ide.c \
 	vfs.c pfat.c bitset.c \
 	paging.c \
-	main.c
+	main.c sem.c
 
 # Kernel object files built from C source files
 KERNEL_C_OBJS := $(KERNEL_C_SRCS:%.c=geekos/%.o)
@@ -139,7 +141,7 @@ TARGET_CC := $(TARGET_CC_PREFIX)gcc
 HOST_CC := gcc
 
 # Target linker.  GNU ld is probably to only one that will work.
-TARGET_LD := $(TARGET_CC_PREFIX)ld
+TARGET_LD := $(TARGET_CC_PREFIX)ld -melf_i386
 
 # Target archiver
 TARGET_AR := $(TARGET_CC_PREFIX)ar
@@ -185,14 +187,14 @@ GENERAL_OPTS := -O -Wall $(EXTRA_C_OPTS)
 CC_GENERAL_OPTS := $(GENERAL_OPTS) -Werror 
 
 # Flags used for kernel C source files
-CC_KERNEL_OPTS := -g -DGEEKOS -I$(PROJECT_ROOT)/include
+CC_KERNEL_OPTS := -m32 -g -DGEEKOS -I$(PROJECT_ROOT)/include -nostdlib
 
 # Flags user for kernel assembly files
 NASM_KERNEL_OPTS := -I$(PROJECT_ROOT)/src/geekos/ -f elf $(EXTRA_NASM_OPTS)
 
 # Flags used for common library and libc source files
-CC_USER_OPTS := -I$(PROJECT_ROOT)/include -I$(PROJECT_ROOT)/include/libc \
-	$(EXTRA_CC_USER_OPTS)
+CC_USER_OPTS := -m32 -I$(PROJECT_ROOT)/include -I$(PROJECT_ROOT)/include/libc \
+	-nostdlib $(EXTRA_CC_USER_OPTS)
 
 # Flags passed to objcopy program (strip unnecessary sections from kernel.exe)
 OBJCOPY_FLAGS := -R .dynamic -R .note -R .comment
@@ -305,6 +307,8 @@ clean :
 	for d in geekos common libc user tools; do \
 		(cd $$d && rm -f *); \
 	done
+	rm -f $(ALL_TARGETS) depend.mak bochs.out pagefile.bin
+
 
 # Build header file dependencies, so source files are recompiled when
 # header files they depend on are modified.
